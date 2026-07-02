@@ -1,12 +1,14 @@
-# YOLO Object Detection Model Comparison
+# YOLO Object Detection Benchmark
 
-This project benchmarks multiple pretrained YOLO object-detection models on the same traffic video. It compares total frame-level detections and model-reported processing time on CPU and GPU, while saving one annotated output video for each unique model.
+A reproducible benchmark comparing seven pretrained YOLO object-detection models on the same traffic video across CPU and GPU execution.
 
-![Model output comparison](assets/model-output-comparison.png)
+The project uses Ultralytics YOLO, PyTorch, and OpenCV to process every readable video frame, count detections, measure runtime, calculate end-to-end throughput, save annotated videos, and export the results to CSV.
 
-## Models
+[View the executed notebook on Kaggle](https://www.kaggle.com/code/marioyouchia/yolo-object-detection-benchmark)
 
-The consolidated implementation uses these unique Ultralytics model weights:
+## Benchmark Scope
+
+The following pretrained models are compared:
 
 - YOLOv3u
 - YOLOv5n-u
@@ -16,31 +18,73 @@ The consolidated implementation uses these unique Ultralytics model weights:
 - YOLOv5x-u
 - YOLOv8n
 
-The original notebook also called `yolov5m.pt`. Ultralytics redirected that legacy filename to `yolov5mu.pt`, so the resulting video was byte-for-byte identical to the YOLOv5m-u output. The duplicate video and duplicate CPU/GPU copies were removed from this package.
+Each model is executed once on the CPU and once on the GPU using the same input video and inference pipeline.
 
-## Original benchmark results
+This project evaluates inference behavior and computational performance. It does not train a custom detector.
 
-These values were preserved from the executed project notebook and its report. Processing time is the accumulated `preprocess + inference + postprocess` time reported by Ultralytics for each readable frame; it is not full wall-clock runtime.
+## Detection Preview
 
-| Model run | Total frame detections | CPU time | GPU time |
-|---|---:|---:|---:|
-| YOLOv3u | 2,614 | 596 s | 7 s |
-| YOLOv5m-u | 2,583 | 166 s | 3 s |
-| YOLOv8n | 2,483 | 28 s | 1 s |
-| YOLOv5n, legacy name | 2,272 | 25 s | 1 s |
-| YOLOv5s, legacy name | 2,428 | 62 s | 2 s |
-| YOLOv5m, legacy alias | 2,583 | 156 s | 2 s |
-| YOLOv5l, legacy name | 2,668 | 298 s | 4 s |
-| YOLOv5x, legacy name | 2,719 | 530 s | 6 s |
+![YOLOv5x-u detection example 1](assets/yolov5xu-detection-frame-01.png)
 
-![Runtime comparison](assets/runtime-comparison.png)
+YOLOv5x-u detections on a traffic frame containing nearby and distant vehicles.
 
-The count represents detections summed across video frames, not unique tracked physical objects.
+![YOLOv5x-u detection example 2](assets/yolov5xu-detection-frame-02.png)
 
-## Repository structure
+A second annotated frame showing simultaneous vehicle and pedestrian detections.
+
+## Runtime Comparison
+
+![CPU and GPU runtime comparison](assets/runtime-comparison.png)
+
+Model-reported processing time for the CPU and GPU runs. A logarithmic vertical scale keeps the faster GPU measurements visible beside the longer CPU measurements.
+
+## Executed Results
+
+The executed Kaggle notebook used:
+
+- NVIDIA Tesla T4 GPU
+- PyTorch 2.10.0 with CUDA 12.8
+- 145 readable video frames
+- 720 × 480 video resolution
+- 25 FPS source frame rate
+
+| Model | Total frame detections | CPU wall time (s) | CPU wall FPS | GPU wall time (s) | GPU wall FPS |
+|---|---:|---:|---:|---:|---:|
+| YOLOv3u | 2,614 | 202.80 | 0.71 | 10.99 | 13.20 |
+| YOLOv5n-u | 2,272 | 12.07 | 12.01 | 3.31 | 43.83 |
+| YOLOv5s-u | 2,428 | 25.14 | 5.77 | 3.49 | 41.53 |
+| YOLOv5m-u | 2,583 | 56.86 | 2.55 | 4.48 | 32.34 |
+| YOLOv5l-u | 2,668 | 107.64 | 1.35 | 6.60 | 21.97 |
+| YOLOv5x-u | 2,719 | 183.81 | 0.79 | 10.59 | 13.69 |
+| YOLOv8n | 2,483 | 12.44 | 11.65 | 3.36 | 43.11 |
+
+### Main observations
+
+- YOLOv5n-u achieved the highest measured GPU wall throughput at approximately 43.83 FPS.
+- YOLOv8n produced a similar GPU throughput of approximately 43.11 FPS.
+- YOLOv5x-u produced the largest total number of frame-level detections.
+- GPU execution substantially reduced processing time for every tested model.
+- Larger models generally detected more objects but required more processing time.
+
+`total_frame_detections` is the sum of all bounding boxes produced across all processed frames. It is not an accuracy metric because the project does not include ground-truth annotations.
+
+## Measurements
+
+The exported CSV includes:
+
+- `model`: display name of the tested model
+- `weight_reference`: pretrained weight filename
+- `device`: CPU or GPU
+- `frames`: number of processed frames
+- `total_frame_detections`: total bounding boxes across all frames
+- `model_time_seconds`: time reported by the model for preprocessing, inference, and postprocessing
+- `wall_time_seconds`: complete elapsed processing time, including video reading, inference, annotation, and video writing
+- `wall_fps`: processed frames divided by wall-clock time
+
+## Repository Structure
 
 ```text
-.
+YOLO-Object-Detection-Benchmark/
 ├── README.md
 ├── yolo_object_detection_benchmark.ipynb
 ├── requirements.txt
@@ -55,41 +99,95 @@ The count represents detections summed across video frames, not unique tracked p
 │   ├── yolov5xu.mp4
 │   └── yolov8n.mp4
 ├── results/
-│   └── original_benchmark_results.csv
+│   └── benchmark_results.csv
 └── assets/
-    ├── model-output-comparison.png
-    └── runtime-comparison.png
+    ├── runtime-comparison.png
+    ├── yolov5xu-detection-frame-01.png
+    └── yolov5xu-detection-frame-02.png
 ```
 
-Pretrained `.pt` weight files are intentionally not included. Ultralytics downloads them when the notebook is executed, avoiding hundreds of megabytes of duplicated third-party model files.
+## Running on Kaggle
 
-## Run on Kaggle
+1. Open the [executed Kaggle notebook](https://www.kaggle.com/code/marioyouchia/yolo-object-detection-benchmark).
+2. Attach a Kaggle dataset containing `Test_sample_video.mp4`.
+3. Enable a GPU accelerator.
+4. Set the benchmark configuration:
 
-1. Upload this project folder or ZIP as a Kaggle Dataset.
-2. Create a Kaggle Notebook and attach the dataset.
-3. Enable a GPU accelerator when GPU benchmarking is required.
-4. Upload/open `yolo_object_detection_benchmark.ipynb`.
-5. Run the cells in order.
+```python
+RUN_CPU = True
+RUN_GPU = True
+MAX_FRAMES = None
+SAVE_ANNOTATED_VIDEOS = True
+```
 
-The notebook automatically searches `/kaggle/input` for `Test_sample_video.mp4` and writes new files under `/kaggle/working/yolo-benchmark`.
+5. Run all notebook cells.
 
-## Run locally
+With both device flags enabled, each model is benchmarked once on the CPU and once on the GPU during the same notebook run.
+
+## Running Locally
+
+Create and activate a virtual environment, then install the dependencies:
 
 ```bash
-python -m pip install -r requirements.txt
-jupyter notebook yolo_object_detection_benchmark.ipynb
+python -m venv .venv
 ```
 
-## Methodology notes
+Windows:
 
-- Every model processes the same readable video frames.
-- CPU and GPU execution are selected explicitly through the Ultralytics `device` argument.
-- Annotated videos are written using the source video's dimensions and frame rate.
-- Only one visual output is saved per unique model; CPU and GPU output copies are not duplicated.
-- The notebook records both Ultralytics model time and end-to-end wall-clock time for future reruns.
+```bash
+.venv\Scripts\activate
+```
 
-## Known limitation
+Linux or macOS:
 
-The provided MP4 advertises roughly 1,745 frames in its container metadata, but decoding stops after 145 readable frames. The included historical outputs and measurements therefore cover those 145 readable frames, producing approximately 5.8 seconds of video at 25 FPS. This source-file limitation is detected and reported by the consolidated notebook.
+```bash
+source .venv/bin/activate
+```
 
-Rerunning with newer Ultralytics, PyTorch, CUDA, or hardware versions can produce different timings and occasionally different detections. The table above should be treated as the historical result of the original run, while newly generated CSV files are the result of the current environment.
+Install the required packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+Place the test video at:
+
+```text
+data/Test_sample_video.mp4
+```
+
+Then open and run:
+
+```text
+yolo_object_detection_benchmark.ipynb
+```
+
+The pretrained model weights are downloaded automatically by Ultralytics when they are first requested.
+
+## Output Files
+
+A complete run produces:
+
+- one annotated output video per model;
+- `results/benchmark_results.csv`;
+- CPU and GPU runtime records;
+- a runtime-comparison chart.
+
+When CPU and GPU benchmarking are both enabled, the annotated videos are saved from the GPU pass to avoid creating visually identical duplicate videos.
+
+## Source Video Limitation
+
+The source MP4 metadata advertises more frames than can actually be decoded. OpenCV stops after 145 readable frames and reports that the file is partial or damaged.
+
+The notebook detects this condition before benchmarking and processes only the readable frames. Therefore, all reported measurements and generated videos correspond to those 145 frames.
+
+## Technologies
+
+- Python
+- Ultralytics YOLO
+- PyTorch
+- OpenCV
+- pandas
+- Matplotlib
+- Jupyter Notebook
+- Kaggle
